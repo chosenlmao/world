@@ -15,17 +15,32 @@
         }
 
         body {
-            /* Loads background.png with a dark overlay tint so the UI card stands out clearly */
             background: linear-gradient(rgba(15, 23, 42, 0.7), rgba(15, 23, 42, 0.85)), 
                         url('background.png');
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
             color: #f8fafc;
-            height: 100vh;
+            min-height: 100vh;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
+            padding: 20px;
+        }
+
+        .logo-container {
+            text-align: center;
+            margin-bottom: 24px;
+            width: 100%;
+        }
+
+        .game-logo {
+            width: 880px;
+            max-width: 92vw;
+            height: auto;
+            display: inline-block;
+            filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.6));
         }
 
         .card {
@@ -37,17 +52,6 @@
             max-width: 400px;
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
             backdrop-filter: blur(8px);
-        }
-
-        .logo-container {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        .game-logo {
-            max-width: 220px;
-            height: auto;
-            display: inline-block;
         }
 
         p.subtitle {
@@ -156,11 +160,13 @@
 </head>
 <body>
 
+    <!-- LARGE GAME LOGO -->
+    <div class="logo-container">
+        <img src="logo.png" alt="Worlds Collide" class="game-logo">
+    </div>
+
     <!-- START MENU & ACCOUNT CREATOR -->
     <div class="card" id="auth-view">
-        <div class="logo-container">
-            <img src="logo.png" alt="Worlds Collide" class="game-logo">
-        </div>
         <p class="subtitle">Sign in or create an account to play</p>
 
         <div class="tabs">
@@ -191,9 +197,6 @@
 
     <!-- CONNECTED VIEW -->
     <div class="card" id="game-view">
-        <div class="logo-container">
-            <img src="logo.png" alt="Worlds Collide" class="game-logo">
-        </div>
         <p class="subtitle" id="welcome-text">Welcome!</p>
         <div class="status-badge" id="connection-status">Connecting to server...</div>
         
@@ -222,78 +225,4 @@
             e.preventDefault();
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
-            const confirmPassword = document.getElementById('confirm-password').value;
-            const msgEl = document.getElementById('message');
-
-            const accounts = JSON.parse(localStorage.getItem('wc_accounts') || '{}');
-
-            if (mode === 'signup') {
-                if (password !== confirmPassword) {
-                    msgEl.className = 'message error';
-                    msgEl.textContent = 'Passwords do not match.';
-                    return;
-                }
-                if (accounts[username.toLowerCase()]) {
-                    msgEl.className = 'message error';
-                    msgEl.textContent = 'That username is already taken.';
-                    return;
-                }
-
-                accounts[username.toLowerCase()] = { username, password };
-                localStorage.setItem('wc_accounts', JSON.stringify(accounts));
-                enterGame(username);
-
-            } else {
-                const account = accounts[username.toLowerCase()];
-                if (!account || account.password !== password) {
-                    msgEl.className = 'message error';
-                    msgEl.textContent = 'Invalid username or password.';
-                    return;
-                }
-                enterGame(account.username);
-            }
-        }
-
-        async function enterGame(username) {
-            document.getElementById('auth-view').style.display = 'none';
-            document.getElementById('game-view').style.display = 'block';
-            document.getElementById('welcome-text').textContent = `Logged in as ${username}`;
-            
-            const statusEl = document.getElementById('connection-status');
-            statusEl.textContent = 'Connecting to server (waking up if sleeping)...';
-
-            let connected = false;
-            let attempts = 0;
-
-            while (!connected && attempts < 8) {
-                try {
-                    room = await client.joinOrCreate("game_room", { username });
-                    connected = true;
-                    statusEl.style.color = '#4ade80';
-                    statusEl.style.background = 'rgba(74, 222, 128, 0.15)';
-                    statusEl.textContent = `Connected • Room ID: ${room.roomId}`;
-                } catch (err) {
-                    attempts++;
-                    console.log(`Attempt ${attempts}: Server waking up...`);
-                    await new Promise(resolve => setTimeout(resolve, 4000));
-                }
-            }
-
-            if (!connected) {
-                statusEl.style.color = '#f87171';
-                statusEl.style.background = 'rgba(248, 113, 113, 0.15)';
-                statusEl.textContent = 'Server took too long. Click Log Out to retry.';
-            }
-        }
-
-        function logout() {
-            if (room) room.leave();
-            document.getElementById('game-view').style.display = 'none';
-            document.getElementById('auth-view').style.display = 'block';
-            document.getElementById('password').value = '';
-            document.getElementById('confirm-password').value = '';
-            document.getElementById('message').textContent = '';
-        }
-    </script>
-</body>
-</html>
+            const confirmPassword = document
