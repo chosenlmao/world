@@ -176,7 +176,7 @@
             <button type="button" class="tab" id="tab-signup" onclick="switchTab('signup')">Create Account</button>
         </div>
 
-        <form id="auth-form" onsubmit="handleAuth(event)">
+        <form id="auth-form" onsubmit="event.preventDefault(); handleAuth();">
             <div class="form-group">
                 <label for="username">Username</label>
                 <input type="text" id="username" placeholder="Enter your username" required minlength="3">
@@ -223,8 +223,81 @@
             document.getElementById('submit-btn').textContent = mode === 'login' ? 'Log In & Play' : 'Create Account & Play';
         }
 
-        function handleAuth(e) {
-            e.preventDefault();
+        function handleAuth() {
             const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
-            const confirmPassword = document
+            const confirmPassword = document.getElementById('confirm-password').value;
+            const msgEl = document.getElementById('message');
+
+            const accounts = JSON.parse(localStorage.getItem('wc_accounts') || '{}');
+
+            if (mode === 'signup') {
+                if (password !== confirmPassword) {
+                    msgEl.className = 'message error';
+                    msgEl.textContent = 'Passwords do not match.';
+                    return;
+                }
+                if (accounts[username.toLowerCase()]) {
+                    msgEl.className = 'message error';
+                    msgEl.textContent = 'That username is already taken.';
+                    return;
+                }
+
+                accounts[username.toLowerCase()] = { username, password };
+                localStorage.setItem('wc_accounts', JSON.stringify(accounts));
+                enterGame(username);
+
+            } else {
+                const account = accounts[username.toLowerCase()];
+                if (!account || account.password !== password) {
+                    msgEl.className = 'message error';
+                    msgEl.textContent = 'Invalid username or password.';
+                    return;
+                }
+                enterGame(account.username);
+            }
+        }
+
+        async function enterGame(username) {
+            document.getElementById('auth-view').style.display = 'none';
+            document.getElementById('game-view').style.display = 'block';
+            document.getElementById('welcome-text').textContent = `Logged in as ${username}`;
+            
+            const statusEl = document.getElementById('connection-status');
+            statusEl.textContent = 'Connecting to server (waking up if sleeping)...';
+
+            let connected = false;
+            let attempts = 0;
+
+            while (!connected && attempts < 8) {
+                try {
+                    room = await client.joinOrCreate("game_room", { username });
+                    connected = true;
+                    statusEl.style.color = '#4ade80';
+                    statusEl.style.background = 'rgba(74, 222, 128, 0.15)';
+                    statusEl.textContent = `Connected • Room ID: ${room.roomId}`;
+                } catch (err) {
+                    attempts++;
+                    console.log(`Attempt ${attempts}: Server waking up...`);
+                    await new Promise(resolve => setTimeout(resolve, 4000));
+                }
+            }
+
+            if (!connected) {
+                statusEl.style.color = '#f87171';
+                statusEl.style.background = 'rgba(248, 113, 113, 0.15)';
+                statusEl.textContent = 'Server took too long. Click Log Out to retry.';
+            }
+        }
+
+        function logout() {
+            if (room) room.leave();
+            document.getElementById('game-view').style.display = 'none';
+            document.getElementById('auth-view').style.display = 'block';
+            document.getElementById('password').value = '';
+            document.getElementById('confirm-password').value = '';
+            document.getElementById('message').textContent = '';
+        }
+    </script>
+</body>
+</html>
