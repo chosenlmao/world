@@ -242,23 +242,36 @@
         }
 
         async function enterGame(username) {
-            document.getElementById('auth-view').style.display = 'none';
-            document.getElementById('game-view').style.display = 'block';
-            document.getElementById('welcome-text').textContent = `Logged in as ${username}`;
-            
-            const statusEl = document.getElementById('connection-status');
-            statusEl.textContent = 'Connecting to server...';
+    document.getElementById('auth-view').style.display = 'none';
+    document.getElementById('game-view').style.display = 'block';
+    document.getElementById('welcome-text').textContent = `Logged in as ${username}`;
+    
+    const statusEl = document.getElementById('connection-status');
+    statusEl.textContent = 'Server is waking up (this takes ~30 seconds)...';
 
-            try {
-                room = await client.joinOrCreate("game_room", { username });
-                statusEl.textContent = `Connected • Room ID: ${room.roomId}`;
-            } catch (err) {
-                console.error(err);
-                statusEl.style.color = '#f87171';
-                statusEl.style.background = 'rgba(248, 113, 113, 0.15)';
-                statusEl.textContent = 'Server waking up or offline. Refresh to retry.';
-            }
+    let connected = false;
+    let attempts = 0;
+
+    while (!connected && attempts < 10) {
+        try {
+            room = await client.joinOrCreate("game_room", { username });
+            connected = true;
+            statusEl.style.color = '#4ade80';
+            statusEl.style.background = 'rgba(74, 222, 128, 0.15)';
+            statusEl.textContent = `Connected • Room ID: ${room.roomId}`;
+        } catch (err) {
+            attempts++;
+            console.log(`Attempt ${attempts} failed, server still waking up...`);
+            await new Promise(resolve => setTimeout(resolve, 4000)); // Wait 4 seconds before retrying
         }
+    }
+
+    if (!connected) {
+        statusEl.style.color = '#f87171';
+        statusEl.style.background = 'rgba(248, 113, 113, 0.15)';
+        statusEl.textContent = 'Server took too long to wake up. Refresh to retry.';
+    }
+}
 
         function logout() {
             if (room) room.leave();
