@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Worlds Collide</title>
+    <!-- Colyseus Browser SDK -->
     <script src="https://unpkg.com/colyseus.js@^0.15.0/dist/colyseus.js"></script>
     <style>
         * {
@@ -127,6 +128,7 @@
         .error { color: #f87171; }
         .success { color: #4ade80; }
 
+        /* Lobby / Game View (Hidden until logged in) */
         #game-view {
             display: none;
             text-align: center;
@@ -145,6 +147,7 @@
 </head>
 <body>
 
+    <!-- START MENU & ACCOUNT CREATOR -->
     <div class="card" id="auth-view">
         <h1>WORLDS COLLIDE</h1>
         <p class="subtitle">Sign in or create an account to play</p>
@@ -156,8 +159,8 @@
 
         <form id="auth-form" onsubmit="handleAuth(event)">
             <div class="form-group">
-                <label for="email">Email</label>
-                <input type="email" id="email" placeholder="Enter your email" required>
+                <label for="username">Username</label>
+                <input type="text" id="username" placeholder="Enter your username" required minlength="3">
             </div>
 
             <div class="form-group">
@@ -175,6 +178,7 @@
         </form>
     </div>
 
+    <!-- CONNECTED VIEW -->
     <div class="card" id="game-view">
         <h1>WORLDS COLLIDE</h1>
         <p class="subtitle" id="welcome-text">Welcome!</p>
@@ -190,10 +194,7 @@
     <script>
         let mode = 'login';
         let room = null;
-        
-        // IMPORTANT: Change this to your exact Render backend Web Service URL!
-        const SERVER_URL = "https://worlds-collide.onrender.com";
-        const client = new Colyseus.Client(SERVER_URL);
+        const client = new Colyseus.Client("wss://worlds-collide.onrender.com");
 
         function switchTab(newMode) {
             mode = newMode;
@@ -204,63 +205,58 @@
             document.getElementById('submit-btn').textContent = mode === 'login' ? 'Log In & Play' : 'Create Account & Play';
         }
 
-        async function handleAuth(e) {
+        function handleAuth(e) {
             e.preventDefault();
-            const email = document.getElementById('email').value.trim();
+            const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
             const confirmPassword = document.getElementById('confirm-password').value;
             const msgEl = document.getElementById('message');
 
-            if (mode === 'signup' && password !== confirmPassword) {
-                msgEl.className = 'message error';
-                msgEl.textContent = 'Passwords do not match.';
-                return;
-            }
+            const accounts = JSON.parse(localStorage.getItem('wc_accounts') || '{}');
 
-            const endpoint = mode === 'signup' ? '/api/signup' : '/api/login';
-            msgEl.className = 'message';
-            msgEl.textContent = 'Connecting...';
-
-            try {
-                const response = await fetch(`${SERVER_URL}${endpoint}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username: email, password })
-                });
-
-                const data = await response.json();
-
-                if (!response.ok) {
+            if (mode === 'signup') {
+                if (password !== confirmPassword) {
                     msgEl.className = 'message error';
-                    msgEl.textContent = data.error || 'Authentication failed.';
+                    msgEl.textContent = 'Passwords do not match.';
+                    return;
+                }
+                if (accounts[username.toLowerCase()]) {
+                    msgEl.className = 'message error';
+                    msgEl.textContent = 'That username is already taken.';
                     return;
                 }
 
-                enterGame(data.username);
+                accounts[username.toLowerCase()] = { username, password };
+                localStorage.setItem('wc_accounts', JSON.stringify(accounts));
+                enterGame(username);
 
-            } catch (err) {
-                console.error(err);
-                msgEl.className = 'message error';
-                msgEl.textContent = 'Could not connect to server (it may be waking up).';
+            } else {
+                const account = accounts[username.toLowerCase()];
+                if (!account || account.password !== password) {
+                    msgEl.className = 'message error';
+                    msgEl.textContent = 'Invalid username or password.';
+                    return;
+                }
+                enterGame(account.username);
             }
         }
 
-        async function enterGame(email) {
+        async function enterGame(username) {
             document.getElementById('auth-view').style.display = 'none';
             document.getElementById('game-view').style.display = 'block';
-            document.getElementById('welcome-text').textContent = `Logged in as ${email}`;
+            document.getElementById('welcome-text').textContent = `Logged in as ${username}`;
             
             const statusEl = document.getElementById('connection-status');
-            statusEl.textContent = 'Connecting to game room...';
+            statusEl.textContent = 'Connecting to server...';
 
             try {
-                room = await client.joinOrCreate("game_room", { username: email });
+                room = await client.joinOrCreate("game_room", { username });
                 statusEl.textContent = `Connected • Room ID: ${room.roomId}`;
             } catch (err) {
                 console.error(err);
                 statusEl.style.color = '#f87171';
                 statusEl.style.background = 'rgba(248, 113, 113, 0.15)';
-                statusEl.textContent = 'Game room connection failed.';
+                statusEl.textContent = 'Server waking up or offline. Refresh to retry.';
             }
         }
 
