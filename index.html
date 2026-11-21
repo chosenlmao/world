@@ -15,7 +15,12 @@
         }
 
         body {
-            background: radial-gradient(circle at top, #1e293b, #0f172a);
+            /* Loads background.png with a dark overlay tint so the UI card stands out clearly */
+            background: linear-gradient(rgba(15, 23, 42, 0.7), rgba(15, 23, 42, 0.85)), 
+                        url('background.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
             color: #f8fafc;
             height: 100vh;
             display: flex;
@@ -34,12 +39,15 @@
             backdrop-filter: blur(8px);
         }
 
-        h1 {
+        .logo-container {
             text-align: center;
-            font-size: 1.8rem;
-            margin-bottom: 6px;
-            letter-spacing: 1px;
-            color: #38bdf8;
+            margin-bottom: 20px;
+        }
+
+        .game-logo {
+            max-width: 220px;
+            height: auto;
+            display: inline-block;
         }
 
         p.subtitle {
@@ -150,7 +158,9 @@
 
     <!-- START MENU & ACCOUNT CREATOR -->
     <div class="card" id="auth-view">
-        <h1>WORLDS COLLIDE</h1>
+        <div class="logo-container">
+            <img src="logo.png" alt="Worlds Collide" class="game-logo">
+        </div>
         <p class="subtitle">Sign in or create an account to play</p>
 
         <div class="tabs">
@@ -181,7 +191,9 @@
 
     <!-- CONNECTED VIEW -->
     <div class="card" id="game-view">
-        <h1>WORLDS COLLIDE</h1>
+        <div class="logo-container">
+            <img src="logo.png" alt="Worlds Collide" class="game-logo">
+        </div>
         <p class="subtitle" id="welcome-text">Welcome!</p>
         <div class="status-badge" id="connection-status">Connecting to server...</div>
         
