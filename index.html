@@ -1,7 +1,197 @@
-<script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Worlds Collide</title>
+    <script src="https://unpkg.com/colyseus.js@^0.15.0/dist/colyseus.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background: radial-gradient(circle at top, #1e293b, #0f172a);
+            color: #f8fafc;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .card {
+            background: rgba(30, 41, 59, 0.85);
+            border: 1px solid #334155;
+            border-radius: 16px;
+            padding: 32px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 1.8rem;
+            margin-bottom: 6px;
+            letter-spacing: 1px;
+            color: #38bdf8;
+        }
+
+        p.subtitle {
+            text-align: center;
+            color: #94a3b8;
+            font-size: 0.9rem;
+            margin-bottom: 24px;
+        }
+
+        .tabs {
+            display: flex;
+            background: #0f172a;
+            border-radius: 8px;
+            padding: 4px;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            border: none;
+            background: transparent;
+            color: #94a3b8;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: 0.2s;
+        }
+
+        .tab.active {
+            background: #38bdf8;
+            color: #0f172a;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            font-size: 0.85rem;
+            color: #cbd5e1;
+            margin-bottom: 6px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #334155;
+            background: #0f172a;
+            color: #f8fafc;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        input:focus {
+            border-color: #38bdf8;
+        }
+
+        button.primary-btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            background: #38bdf8;
+            color: #0f172a;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 8px;
+            transition: 0.2s;
+        }
+
+        button.primary-btn:hover {
+            background: #7dd3fc;
+        }
+
+        .message {
+            margin-top: 14px;
+            text-align: center;
+            font-size: 0.85rem;
+            min-height: 20px;
+        }
+
+        .error { color: #f87171; }
+        .success { color: #4ade80; }
+
+        #game-view {
+            display: none;
+            text-align: center;
+        }
+
+        .status-badge {
+            display: inline-block;
+            background: rgba(74, 222, 128, 0.15);
+            color: #4ade80;
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="card" id="auth-view">
+        <h1>WORLDS COLLIDE</h1>
+        <p class="subtitle">Sign in or create an account to play</p>
+
+        <div class="tabs">
+            <button type="button" class="tab active" id="tab-login" onclick="switchTab('login')">Log In</button>
+            <button type="button" class="tab" id="tab-signup" onclick="switchTab('signup')">Create Account</button>
+        </div>
+
+        <form id="auth-form" onsubmit="handleAuth(event)">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" placeholder="Enter your email" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="Enter your password" required minlength="4">
+            </div>
+
+            <div class="form-group" id="confirm-group" style="display: none;">
+                <label for="confirm-password">Confirm Password</label>
+                <input type="password" id="confirm-password" placeholder="Confirm your password">
+            </div>
+
+            <button type="submit" class="primary-btn" id="submit-btn">Log In & Play</button>
+            <div class="message" id="message"></div>
+        </form>
+    </div>
+
+    <div class="card" id="game-view">
+        <h1>WORLDS COLLIDE</h1>
+        <p class="subtitle" id="welcome-text">Welcome!</p>
+        <div class="status-badge" id="connection-status">Connecting to server...</div>
+        
+        <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 20px;">
+            You are now in the lobby. Ready to play!
+        </p>
+
+        <button type="button" class="primary-btn" style="background: #334155; color: #f8fafc;" onclick="logout()">Log Out</button>
+    </div>
+
+    <script>
         let mode = 'login';
         let room = null;
-        // Pointing to your Render backend server
+        
+        // IMPORTANT: Change this to your exact Render backend Web Service URL!
         const SERVER_URL = "https://worlds-collide.onrender.com";
         const client = new Colyseus.Client(SERVER_URL);
 
@@ -16,7 +206,7 @@
 
         async function handleAuth(e) {
             e.preventDefault();
-            const username = document.getElementById('username').value.trim();
+            const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
             const confirmPassword = document.getElementById('confirm-password').value;
             const msgEl = document.getElementById('message');
@@ -28,12 +218,14 @@
             }
 
             const endpoint = mode === 'signup' ? '/api/signup' : '/api/login';
+            msgEl.className = 'message';
+            msgEl.textContent = 'Connecting...';
 
             try {
                 const response = await fetch(`${SERVER_URL}${endpoint}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify({ username: email, password })
                 });
 
                 const data = await response.json();
@@ -44,32 +236,31 @@
                     return;
                 }
 
-                // Success! Proceed to game lobby
                 enterGame(data.username);
 
             } catch (err) {
                 console.error(err);
                 msgEl.className = 'message error';
-                msgEl.textContent = 'Could not connect to server.';
+                msgEl.textContent = 'Could not connect to server (it may be waking up).';
             }
         }
 
-        async function enterGame(username) {
+        async function enterGame(email) {
             document.getElementById('auth-view').style.display = 'none';
             document.getElementById('game-view').style.display = 'block';
-            document.getElementById('welcome-text').textContent = `Logged in as ${username}`;
+            document.getElementById('welcome-text').textContent = `Logged in as ${email}`;
             
             const statusEl = document.getElementById('connection-status');
-            statusEl.textContent = 'Connecting to server...';
+            statusEl.textContent = 'Connecting to game room...';
 
             try {
-                room = await client.joinOrCreate("game_room", { username });
+                room = await client.joinOrCreate("game_room", { username: email });
                 statusEl.textContent = `Connected • Room ID: ${room.roomId}`;
             } catch (err) {
                 console.error(err);
                 statusEl.style.color = '#f87171';
                 statusEl.style.background = 'rgba(248, 113, 113, 0.15)';
-                statusEl.textContent = 'Server connection failed.';
+                statusEl.textContent = 'Game room connection failed.';
             }
         }
 
@@ -79,5 +270,8 @@
             document.getElementById('auth-view').style.display = 'block';
             document.getElementById('password').value = '';
             document.getElementById('confirm-password').value = '';
+            document.getElementById('message').textContent = '';
         }
     </script>
+</body>
+</html>
